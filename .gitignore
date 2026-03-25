@@ -1,0 +1,18 @@
+# Ignorar TODAS las carpetas node_modules
+**/node_modules/
+node_modules/
+
+# Ignorar entornos virtuales de Python (Backend-AI)
+**/venv/
+**/.venv/
+**/__pycache__/
+
+# Ignorar carpetas de construcción
+**/.next/
+**/artifacts/
+**/cache/
+
+# Seguridad y temporales
+.env
+.env.local
+*.log
