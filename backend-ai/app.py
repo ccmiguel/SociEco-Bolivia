@@ -64,6 +64,23 @@ def scan_material():
         "creative_recycling": creative_ideas
     }
     
+    # 4. Guardar en Supabase (Persistencia Real)
+    if supabase:
+        try:
+            # Preparamos el dato para la tabla que creamos
+            data_to_insert = {
+                "material": material_type,
+                "peso": 0.25,
+                "co2_ahorrado": 0.12, # Cálculo simple de impacto: 0.25*0.5
+                "estado": "completado"
+                # "usuario_id": "" <--- Esto lo vincularemos cuando tengamos Auth
+            }
+            
+            response = supabase.table('transacciones_reciclaje').insert(data_to_insert).execute()
+            print(f"Transacción guardada en Supabase: {response.data}")
+        except Exception as e:
+            print(f"Error al guardar en BD: {e}")
+
     return jsonify(result), 200
 
 if __name__ == '__main__':
