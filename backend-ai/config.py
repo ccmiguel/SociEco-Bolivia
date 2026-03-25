@@ -4,6 +4,9 @@ from supabase import create_client, Client
 
 load_dotenv()
 
+print(f"DEBUG: Buscando URL en: {os.getcwd()}")
+print(f"DEBUG: URL encontrada: {os.getenv('SUPABASE_URL')}")
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
