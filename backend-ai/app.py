@@ -32,6 +32,20 @@ def scan_material():
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
 
+    # 0. Autenticación (Obtener usuario vía token de Supabase)
+    user_id = None
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+        if supabase:
+            try:
+                user_response = supabase.auth.get_user(token)
+                if user_response and user_response.user:
+                    user_id = user_response.user.id
+            except Exception as e:
+                print(f"Error de auth: {e}")
+                return jsonify({"error": "Token inválido o no autorizado"}), 401
+
     # 1. Recibir imagen
     material_type = ""
     if 'image' in request.files:
@@ -73,9 +87,11 @@ def scan_material():
                 "peso": 0.25,
                 "co2_ahorrado": 0.12, # Cálculo simple de impacto: 0.25*0.5
                 "estado": "completado"
-                # "usuario_id": "" <--- Esto lo vincularemos cuando tengamos Auth
             }
             
+            if user_id:
+                data_to_insert["usuario_id"] = user_id
+                
             response = supabase.table('transacciones_reciclaje').insert(data_to_insert).execute()
             print(f"Transacción guardada en Supabase: {response.data}")
         except Exception as e:
