@@ -6,8 +6,8 @@ export const BottomNav: React.FC = () => {
   return (
     <div className="fixed bottom-0 w-full max-w-md left-1/2 -translate-x-1/2 bg-white rounded-t-[32px] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-6 py-2 flex justify-between items-center z-50">
       <NavItem href="/" icon={<Home size={24} />} label="Inicio" />
-      <NavItem href="/market" icon={<Map size={24} />} label="Mercado" />
-      
+      <NavItem href="/mapa" icon={<Map size={24} />} label="Mapa" />
+
       {/* FAB Central Prominente for Scanner */}
       <div className="relative -top-7">
         <Link href="/scanner">
@@ -16,9 +16,9 @@ export const BottomNav: React.FC = () => {
           </button>
         </Link>
       </div>
-      
+
       <NavItem href="/lakaplay" icon={<PlayCircle size={24} />} label="LakaPlay" />
-      <NavItem href="/#" icon={<BookOpen size={24} />} label="Misiones" />
+      <NavItem href="/portal-empresarial" icon={<BookOpen size={24} />} label="Empresas" />
     </div>
   );
 };

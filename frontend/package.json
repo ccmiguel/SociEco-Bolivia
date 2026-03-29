@@ -14,12 +14,15 @@
     "@supabase/supabase-js": "^2.100.1",
     "ethers": "^6.11.1",
     "framer-motion": "^11.0.14",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.360.0",
     "next": "^14.2.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-leaflet": "^4.2.1"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^20.12.0",
     "@types/react": "^18.2.73",
     "@types/react-dom": "^18.2.23",

@@ -33,18 +33,25 @@ def scan_material():
         return jsonify({"status": "ok"}), 200
 
     # 0. Autenticación (Obtener usuario vía token de Supabase)
-    user_id = None
+    # 0. Autenticación (Resolver Profile ID)
+    auth_id = None
+    profile_id = None 
     auth_header = request.headers.get('Authorization')
+
     if auth_header and auth_header.startswith('Bearer '):
         token = auth_header.split(' ')[1]
         if supabase:
             try:
                 user_response = supabase.auth.get_user(token)
                 if user_response and user_response.user:
-                    user_id = user_response.user.id
+                    auth_id = user_response.user.id
+                    # BUSCAMOS EL ID DE LA TABLA PERFILES
+                    perfil_res = supabase.table('perfiles').select('id').eq('user_id', auth_id).single().execute()
+                    if perfil_res.data:
+                        profile_id = perfil_res.data['id']
+                        print(f"DEBUG: Perfil vinculado exitosamente: {profile_id}")
             except Exception as e:
-                print(f"Error de auth: {e}")
-                return jsonify({"error": "Token inválido o no autorizado"}), 401
+                print(f"Error de validación: {e}")
 
     # 1. Recibir imagen
     material_type = ""
@@ -81,22 +88,34 @@ def scan_material():
     # 4. Guardar en Supabase (Persistencia Real)
     if supabase:
         try:
-            # Preparamos el dato para la tabla que creamos
+            # Definimos los valores de impacto para SocioEco
+            peso_actual = 0.25
+            impacto_co2 = peso_actual * 0.5   # 0.5kg CO2 por kg de plástico
+            impacto_agua = peso_actual * 15.0 # 15L de agua por kg de plástico
+
+            # Preparamos el dato para la tabla 'transacciones_reciclaje'
             data_to_insert = {
                 "material": material_type,
-                "peso": 0.25,
-                "co2_ahorrado": 0.12, # Cálculo simple de impacto: 0.25*0.5
+                "peso": float(peso_actual),
+                "co2_ahorrado": float(impacto_co2),
+                "agua_ahorrada": float(impacto_agua), # Nueva columna para tu diseño de Figma
                 "estado": "completado"
             }
             
-            if user_id:
-                data_to_insert["usuario_id"] = user_id
-                
+            # CRUCIAL: Vinculamos el usuario_id real obtenido del token
+            if profile_id:
+                data_to_insert["usuario_id"] = profile_id
+            else:
+                print("DEBUG: No hay profile_id, revisa si el usuario tiene una fila en 'perfiles'")
+            
+            # Realizamos el insert
+            # Al ejecutarse esto, el TRIGGER que creaste en SQL actualizará tu PERFIL automáticamente
             response = supabase.table('transacciones_reciclaje').insert(data_to_insert).execute()
-            print(f"Transacción guardada en Supabase: {response.data}")
-        except Exception as e:
-            print(f"Error al guardar en BD: {e}")
+            print(f"Transacción guardada exitosamente: {response.data}")
 
+        except Exception as e:
+            print(f"Error al guardar en la base de datos: {e}")
+    
     return jsonify(result), 200
 
 if __name__ == '__main__':
