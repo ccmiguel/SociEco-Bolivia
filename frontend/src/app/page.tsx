@@ -4,21 +4,36 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { Leaf, Award, Droplet, Wind, Flame } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-// import { supabase } from "@/services/supabase"; // Use to fetch real data
+import { supabase } from "@/services/supabase";
 
 export default function Home() {
   const router = useRouter();
-  const [impact, setImpact] = useState({ co2: 0, agua: 0, puntos: 0, nivel: 1 });
+  const [impact, setImpact] = useState({ co2: 0, peso: 0, puntos: 0, nivel: 1 });
+  const [profile, setProfile] = useState({ nombre: 'Usuario', racha: 0 });
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
 
   const handleRecycleClick = async () => {
     setConnecting(true);
     try {
+
+      // 1. Obtener el token de la sesión activa
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
       // Test de conexión con el backend de Inteligencia Artificial (Flask)
       const res = await fetch('http://localhost:5000/api/scan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({}) // Enviamos vacío para solo testear si levanta
       });
 
@@ -38,12 +53,50 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchImpact() {
-      // 1. Aquí se llamaría a supabase: supabase.from('perfiles').select('co2_ahorrado, agua_ahorrada')
-      // 2. Simulamos la consulta
-      setTimeout(() => {
-        setImpact({ co2: 12.5, agua: 450, puntos: 1540, nivel: 4 });
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // 1. Buscamos el perfil usando 'user_id' (que es el ID de Auth)
+        const { data: profileData, error: pError } = await supabase
+          .from('perfiles')
+          .select('id, nombre, puntos_totales, co2_ahorrado') // USA 'nombre'
+          .eq('user_id', user.id) // USA 'user_id' para filtrar por el ID de Auth
+          .single();
+
+        if (profileData) {
+          setProfile({
+            nombre: profileData.nombre ? profileData.nombre.split(' ')[0] : 'Miguel',
+            racha: 0
+          });
+
+          // 2. Usamos el ID del PERFIL para buscar sus transacciones
+          const { data: txData } = await supabase
+            .from('transacciones_reciclaje')
+            .select('peso, co2_ahorrado')
+            .eq('usuario_id', profileData.id); // ID del perfil (10dd...)
+
+          let totalPeso = 0;
+          let totalCo2 = profileData.co2_ahorrado || 0;
+
+          if (txData) {
+            txData.forEach(tx => {
+              totalPeso += (tx.peso || 0);
+            });
+          }
+
+          setImpact({
+            co2: totalCo2,
+            peso: totalPeso,
+            puntos: profileData.puntos_totales,
+            nivel: 4
+          });
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      } finally {
         setLoading(false);
-      }, 800);
+      }
     }
     fetchImpact();
   }, []);
@@ -51,8 +104,13 @@ export default function Home() {
   return (
     <main className="p-6 max-w-md mx-auto min-h-screen">
       <header className="mb-8 mt-4">
-        <h1 className="text-3xl font-bold text-socieco-dark mb-2">¡Hola, Usuario!</h1>
-        <p className="text-socieco-muted">Resumen de tu impacto ambiental</p>
+        <div>
+          <h1 className="text-3xl font-bold text-socieco-dark mb-2">
+            ¡Hola, {loading ? 'Cargando...' : profile.nombre}!
+          </h1>
+          <p className="text-socieco-muted">Resumen de tu impacto ambiental</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleLogout}>Salir</Button>
       </header>
 
       {/* Racha / Nivel */}
@@ -63,7 +121,7 @@ export default function Home() {
               <Flame size={24} />
             </div>
             <div>
-              <h2 className="font-bold text-lg text-socieco-primary">Racha de 5 días</h2>
+              <h2 className="font-bold text-lg text-socieco-primary">Racha de {profile.racha} días</h2>
               <p className="text-sm font-light text-socieco-bg opacity-80">¡Sigue así! 🔥</p>
             </div>
           </div>
@@ -94,12 +152,12 @@ export default function Home() {
           <p className="text-xs text-socieco-muted">CO2 Ahorrado</p>
         </Card>
 
-        <Card className="flex flex-col items-center text-center justify-center p-4 border border-blue-100 bg-blue-50">
-          <div className="bg-blue-200 p-3 rounded-full mb-2">
-            <Droplet size={28} className="text-blue-600" />
+        <Card className="flex flex-col items-center text-center justify-center p-4 border border-emerald-100 bg-emerald-50">
+          <div className="bg-emerald-200 p-3 rounded-full mb-2">
+            <Leaf size={28} className="text-emerald-700" />
           </div>
-          <h4 className="font-bold text-socieco-text text-lg">{loading ? '...' : impact.agua} L</h4>
-          <p className="text-xs text-socieco-muted">Agua Ahorrada</p>
+          <h4 className="font-bold text-socieco-text text-lg">{loading ? '...' : impact.peso} kg</h4>
+          <p className="text-xs text-socieco-muted">Peso Reciclado</p>
         </Card>
       </div>
 

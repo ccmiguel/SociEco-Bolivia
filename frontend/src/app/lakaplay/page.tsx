@@ -1,79 +1,101 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
-import { PlayCircle } from 'lucide-react';
-
-// Require import de ether para futura interaccion real
+import { PlayCircle, GraduationCap } from 'lucide-react';
+import { supabase } from "@/services/supabase";
 import { ethers } from 'ethers';
 
 export default function LakaPlayPage() {
-  const [complete, setComplete] = useState<number | null>(null);
+  const [complete, setComplete] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [courses, setCourses] = useState<any[]>([]);
 
-  const courses = [
-    { id: 1, title: "Economía Circular 101", duration: "5 min", points: 50 },
-    { id: 2, title: "Microplásticos: el enemigo", duration: "8 min", points: 80 },
-    { id: 3, title: "Cómo clasificar en origen", duration: "4 min", points: 40 }
-  ];
+  useEffect(() => {
+    const fetchCourses = async () => {
+      const { data, error } = await supabase
+        .from('cursos_lakaplay')
+        .select('*')
+        .order('categoria', { ascending: true });
 
-  const handleFinishVideo = async (courseId: number, points: number) => {
+      if (data) setCourses(data);
+      if (error) console.error("Error cargando cursos:", error);
+    };
+    fetchCourses();
+  }, []);
+
+  const handleFinishVideo = async (courseId: string, points: number) => {
     setLoading(true);
     try {
-      // 1. Detectar billetera Ethers
       if (typeof window !== 'undefined' && !(window as any).ethereum) {
-        alert("Instala Metamask (o usa una billetera inyectada) para mintear tus recompensas on-chain.");
+        alert("Instala Metamask para mintear tus recompensas.");
         setLoading(false);
         return;
       }
-      
       const provider = new ethers.BrowserProvider((window as any).ethereum);
-      await provider.send("eth_requestAccounts", []); // Solicitamos login
-      // const signer = await provider.getSigner();
-      
-      // 2. Interfaz simulada de contrato Traceability.sol usando mintPoints
-      console.log(`Buscando contrato inteligente de SocioEco para depositar ${points} puntos`);
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulando TX Web3
-      
+      await provider.send("eth_requestAccounts", []);
+
+      // Simulación de interacción con Traceability.sol
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       setComplete(courseId);
-      alert(`¡Transacción confirmada en la Blockchain! +${points} puntos añadidos a tu billetera cripto.`);
+      alert(`¡Blockchain confirmada! +${points} puntos SocioEco añadidos.`);
     } catch (err) {
       console.error(err);
-      alert('Error interactuando con la billetera.');
+      alert('Error con la billetera.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
+  // Agrupamos los cursos por categoría para el diseño del video
+  const categories = Array.from(new Set(courses.map(c => c.categoria)));
+
   return (
-    <main className="p-6 max-w-md mx-auto min-h-screen">
-      <h1 className="text-2xl font-bold text-socieco-dark mb-2 mt-6">LakaPlay</h1>
-      <p className="text-sm text-socieco-muted mb-6">Aprende sobre sostenibilidad y gana tokens verificados on-chain mediante el contrato `Traceability.sol`.</p>
-      
-      <div className="space-y-4">
-        {courses.map(course => (
-          <Card key={course.id} className="border-l-4 border-socieco-primary">
-            <h3 className="font-bold text-lg text-socieco-text">{course.title}</h3>
-            <p className="text-sm text-gray-500 mb-4">{course.duration} de video</p>
-            
-            {complete === course.id ? (
-              <div className="bg-[#D9ED92]/30 text-socieco-dark p-3 rounded-lg text-center font-bold text-sm">
-                ✅ Completado - Puntos en tu Wallet
-              </div>
-            ) : (
-              <Button 
-                variant="outline" 
-                className="w-full flex justify-center items-center gap-2 py-3"
-                onClick={() => handleFinishVideo(course.id, course.points)}
-                disabled={loading}
-              >
-                {loading ? 'Firmando Transacción...' : (
-                   <><PlayCircle size={18} /> Ver y ganar +{course.points} pts</>
-                )}
-              </Button>
-            )}
-          </Card>
-        ))}
-      </div>
+    <main className="p-6 max-w-md mx-auto min-h-screen bg-[#FDFBF7]">
+      <header className="mb-8 mt-6">
+        <h1 className="text-3xl font-black text-[#2D4635] uppercase italic">LakaPlay</h1>
+        <p className="text-sm text-[#2D4635]/70 font-medium">Aprende y gana tokens verificados on-chain.</p>
+      </header>
+
+      {categories.map(cat => (
+        <section key={cat} className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <GraduationCap size={20} className="text-[#2D4635]" />
+            <h2 className="text-lg font-bold text-[#2D4635] uppercase tracking-tighter">{cat}</h2>
+          </div>
+
+          <div className="space-y-4">
+            {courses.filter(c => c.categoria === cat).map(course => (
+              <Card key={course.id} className="border-2 border-[#2D4635] shadow-[4px_4px_0px_0px_rgba(45,70,53,1)] overflow-hidden">
+                <div className="p-1">
+                  <h3 className="font-black text-[#2D4635] text-lg">{course.titulo}</h3>
+                  <p className="text-xs font-bold text-gray-500 mb-4">{course.duracion} de video</p>
+
+                  {complete === course.id ? (
+                    <div className="bg-[#D9ED92] border-2 border-[#2D4635] text-[#2D4635] p-3 rounded-xl text-center font-black text-xs uppercase">
+                      ✅ Completado - Puntos en Wallet
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full flex justify-center items-center gap-2 py-4 border-2 border-[#2D4635] hover:bg-[#D9ED92] transition-colors"
+                      onClick={() => handleFinishVideo(course.id, course.puntos_otorgados)}
+                      disabled={loading}
+                    >
+                      {loading ? 'Firmando Transacción...' : (
+                        <span className="flex items-center gap-2 font-black text-xs uppercase">
+                          <PlayCircle size={16} /> Ver y ganar +{course.puntos_otorgados} pts
+                        </span>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ))}
     </main>
   );
 }
